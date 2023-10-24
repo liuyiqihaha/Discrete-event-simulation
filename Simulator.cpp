@@ -14,7 +14,7 @@ namespace DES
 	void Simulator::Enqueue(Event* _event)
 	{
 		// preserve for multithread
-		assert(_event->handle_time_ > this->global_time_);
+		assert(_event->handle_time_ >= this->global_time_);
 
 		this->event_queue_.push(_event);
 	}
@@ -53,7 +53,7 @@ namespace DES
 		this->simulator_state = kRunning;
 		while (this->simulator_state==kRunning && !this->event_queue_.empty())
 		{
-			if (this->global_time_ > 100)
+			if (this->global_time_ > 5000)
 			{
 				this->simulator_state = kHalted;
 				return;

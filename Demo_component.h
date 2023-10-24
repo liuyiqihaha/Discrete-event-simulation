@@ -14,6 +14,6 @@ namespace DES
 	public:
 		DemoComponent(int x, int y);
 		~DemoComponent();
-		std::vector<Event*> excute(Event* _event);
+		std::vector<Event*> Excute(Event* _event);
 	};
 }

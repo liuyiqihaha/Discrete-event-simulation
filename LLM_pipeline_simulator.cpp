@@ -5,16 +5,33 @@
 #include "Event.h"
 #include "Demo_component.h"
 #include "Simulator.h"
+#include "NPU.h"
 
 int main()
 {
     std::cout << "Hello World!\n";
 
-    DES::DemoComponent* demo_component = new DES::DemoComponent(6, 17);
-    DES::Simulator* simulator = new DES::Simulator();
-    DES::Event* _event = new DES::Event(10, std::bind(&DES::DemoComponent::excute, demo_component, std::placeholders::_1));
-    simulator->Enqueue(_event);
-    simulator->Simulate();
+	/*DES::DemoComponent* demo_component = new DES::DemoComponent(6, 17);
+	DES::Simulator* simulator = new DES::Simulator();
+	DES::Event* _event = new DES::Event(10, std::bind(&DES::DemoComponent::excute, demo_component, std::placeholders::_1));
+	simulator->Enqueue(_event);
+	simulator->Simulate();*/
+	
+	DES::DemoComponent* demo_component = new DES::DemoComponent(6, 17);
+	LLM::NPU* npu = new LLM::NPUActAct(demo_component);
+	npu->input_activate_buffer_count_[0] = 5118;
+	npu->input_activate_buffer_count_[1] = 5118;
+	DES::Event* _event1 = new DES::Event(DES::Event::kNpuReceiveAct, 10, std::bind(&LLM::NPU::Excute, npu, std::placeholders::_1));
+	DES::Event* _event2 = new DES::Event(DES::Event::kNpuReceiveAct, 20, std::bind(&LLM::NPU::Excute, npu, std::placeholders::_1));
+	DES::Event* _event3 = new DES::Event(DES::Event::kNpuReceiveAct, 30, std::bind(&LLM::NPU::Excute, npu, std::placeholders::_1));
+	DES::Event* _event4 = new DES::Event(DES::Event::kNpuReceiveAct, 40, std::bind(&LLM::NPU::Excute, npu, std::placeholders::_1));
+	DES::Simulator* simulator = new DES::Simulator();
+	simulator->Enqueue(_event1);
+	simulator->Enqueue(_event2);
+	simulator->Enqueue(_event3);
+	simulator->Enqueue(_event4);
+	simulator->Simulate();
+
 }
 
 // Run program: Ctrl + F5 or Debug > Start Without Debugging menu

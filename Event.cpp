@@ -16,6 +16,13 @@ namespace DES
 		handler_id_(0),
 		handler(handler){}
 
+	Event::Event(EventType event_type, int handle_time, EventHandler handler) :
+		event_type_(event_type),
+		event_name_(""),
+		handle_time_(handle_time),
+		handler_id_(0),
+		handler(handler) {}
+
 	Event::~Event()
 	{}
 

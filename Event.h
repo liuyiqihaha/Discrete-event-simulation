@@ -14,6 +14,8 @@ namespace DES
 	public:
 		enum EventType {
 			kNpuCompute = 0,
+			kNpuReceiveAct,
+			KNpuSendAct
 		};
 
 	public:
@@ -25,6 +27,7 @@ namespace DES
 	public:
 		Event();
 		Event(int handle_time, EventHandler handler);
+		Event(EventType event_type, int handle_time, EventHandler handler);
 		~Event();
 		Event& operator=(const Event& _event);
 
