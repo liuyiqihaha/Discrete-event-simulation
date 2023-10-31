@@ -2,6 +2,7 @@
 #include <string>
 #include <functional>
 #include <vector>
+#include <memory>
 
 namespace DES
 {
@@ -15,7 +16,11 @@ namespace DES
 		enum EventType {
 			kNpuCompute = 0,
 			kNpuReceiveAct,
-			KNpuSendAct
+			KNpuSendAct,
+			kRouterReceiveAct,
+			kRouterRoutingAct,
+			kRouterSendAct
+			
 		};
 
 	public:
@@ -23,6 +28,8 @@ namespace DES
 		std::string event_name_;
 		int handle_time_;
 		int handler_id_;
+		//void* supporting_information;
+		std::shared_ptr<void> supporting_information_;
 
 	public:
 		Event();

@@ -23,6 +23,7 @@ namespace DES
 		handler_id_(0),
 		handler(handler) {}
 
+
 	Event::~Event()
 	{}
 
