@@ -10,23 +10,27 @@
 
 namespace LLM
 {
+	class Message;
 
 	class Router
 	{
 	public:
 		enum Direction {
-			kUp = 0,
-			kLeft,
-			kRight,
+			kRight = 0,
+			kUp,
 			kDown,
+			kLeft,
 			kNpu
 		};
 	
 	public:
 		std::pair<int, int> coordinate_; //坐标
 
-		int buffer_max_; //buffer大小
-		std::queue<DES::Event*> event_buffer_[5]; //事件缓冲区
+		unsigned int buffer_max_; //buffer大小
+		unsigned int buffer_count_[5]; //buffer中的事件数量
+		std::queue<DES::Event*> input_event_buffer_[5]; //事件缓冲区
+		std::queue<std::shared_ptr<Direction>> buffered_output_direction[5]; //用于缓存被暂存的事件的发送方向
+		//std::queue<DES::Event*> output_event_buffer_[5]; //事件缓冲区
 
 		Router* adjcent_router_[4]; //相邻的router
 		NPU* host_npu_; //相连的NPU
@@ -44,14 +48,30 @@ namespace LLM
 	public:
 		std::vector<DES::Event*> Excute(DES::Event* _event);
 		DES::Event* ReceiveAct(DES::Event* _event);
-		DES::Event* RoutingAct(DES::Event* _event);
-		DES::Event* SendAct(DES::Event* _event);
+		std::vector<DES::Event*> RoutingAct(DES::Event* pass_event);
+		//DES::Event* SendAct(DES::Event* _event);
+		DES::Event* SendAct(DES::Event* pass_event);
+
+	private:
+		void HookRoutingAct(int current_time, Direction last_hop, std::vector<DES::Event*>& ret_vec);
 
 	public:
+		/*inline bool OutputBufferReady(Direction direction)
+		{
+			return this->output_event_buffer_[direction].size() < this->buffer_max_;
+		}*/
+
+		inline bool AdjcentDirectionReady(Router* adj, Direction direction)
+		{
+			/*return !adj->input_event_buffer_[direction].empty();*/
+			return adj->buffer_count_[direction] != 0;
+		}
+
 		inline bool AdjcentReady(Direction direction)
 		{
 			//3-direction 为了方向取反，这里假定了所有router buffer大小相等
-			return this->adjcent_router_[direction]->event_buffer_[3 - direction].size() != this->buffer_max_;
+			/*return this->adjcent_router_[direction]->input_event_buffer_[3 - direction].size() < this->buffer_max_;*/
+			return this->adjcent_router_[direction]->buffer_count_[3 - direction] < this->buffer_max_;
 		}
 
 		inline Direction Routing(std::pair<int, int> destination)
@@ -74,6 +94,8 @@ namespace LLM
 				return kNpu;
 			}
 		}
+
+		void BroadcastRouting(std::vector<std::pair<int, int>>& vec_destinations, std::vector<std::shared_ptr<Message>>& vec_messages);
 	};
 
 	class Message
