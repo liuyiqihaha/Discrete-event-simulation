@@ -182,6 +182,9 @@ namespace LLM
 			// 用于存储新的目的地，用于处理部分阻塞
 			std::vector<std::pair<int, int>> vec_new_destinations;
 
+			// 用于存储未就绪的下一条方向，用于处理部分阻塞
+			std::vector<Direction> vec_next_hop_unready;
+
 			// 遍历广播信息
 			for (auto& ele : vec_messages)
 			{
@@ -196,6 +199,9 @@ namespace LLM
 				{
 					//如果阻塞了，需要将阻塞的目的地添加到新的“原事件”
 					vec_new_destinations.insert(vec_new_destinations.end(), ele->destination_.begin(), ele->destination_.end());
+
+					//记录哪个方向被阻塞了
+					vec_next_hop_unready.push_back(ele->next_hop_);
 				}
 			}
 
@@ -213,6 +219,12 @@ namespace LLM
 				//没处理完全，更新目的地
 				message->destination_ = vec_new_destinations;
 				_event->supporting_information_ = std::static_pointer_cast<void>(message);
+
+				//将所有被阻塞的方向，都加入暂存事件的发送方向vec
+				for (auto& ele : vec_next_hop_unready)
+				{
+					this->buffered_output_direction[ele].push(last_hop);
+				}
 			}
 			return vec_ret;
 		}
