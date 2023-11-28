@@ -16,10 +16,14 @@ namespace DES
 		enum EventType {
 			kNpuCompute = 0,
 			kNpuReceiveAct,
-			KNpuSendAct,
+			kNpuSendAct,
 			kRouterReceiveAct,
 			kRouterRoutingAct,
-			kRouterSendAct
+			kRouterSendAct,
+			kNpuReceiveWeight,
+			kNpuSendWeight,
+			kRouterReceiveWeight,
+			kRouterSendWeight
 			
 		};
 

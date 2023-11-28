@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <iostream>
 
 #include "Simulator.h"
 
@@ -60,6 +61,7 @@ namespace DES
 			}
 			this->Dequeue();
 		}
+		std::cout << this->global_time_ << std::endl;
 		this->simulator_state = kStop;
 	}
 }

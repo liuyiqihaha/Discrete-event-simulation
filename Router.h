@@ -1,16 +1,18 @@
 #pragma once
 
+#include <iostream>
 #include <vector>
 #include <queue>
 #include <utility>
 #include <memory>
 
 #include "Event.h"
-#include "NPU.h"
+//#include "NPU.h"
 
 namespace LLM
 {
 	class Message;
+	class NPU;
 
 	class Router
 	{
@@ -56,6 +58,11 @@ namespace LLM
 		void HookRoutingAct(int current_time, Direction last_hop, std::vector<DES::Event*>& ret_vec);
 
 	public:
+		void update_buffer_count_(int d, int update_)
+		{
+			this->buffer_count_[d] += (update_);
+			std::cout << "router (" << this->coordinate_.first << ", " << this->coordinate_.second << ") buffer_count_" << d << " add " << update_ << " become " << this->buffer_count_[d] << " exact buffer is " << this->input_event_buffer_[d].size() << std::endl;
+		}
 		/*inline bool OutputBufferReady(Direction direction)
 		{
 			return this->output_event_buffer_[direction].size() < this->buffer_max_;
@@ -95,7 +102,7 @@ namespace LLM
 			}
 		}
 
-		void BroadcastRouting(std::vector<std::pair<int, int>>& vec_destinations, std::vector<std::shared_ptr<Message>>& vec_messages);
+		bool BroadcastRouting(std::vector<std::pair<int, int>>& vec_destinations, std::vector<std::shared_ptr<Message>>& vec_messages, std::shared_ptr<Message>& initial_message, DES::Event* pass_event, std::vector<DES::Event*>& new_events_);
 	};
 
 	class Message
@@ -108,6 +115,7 @@ namespace LLM
 
 	public:
 		MessageType message_type_;
+		int src_npu_type_;
 		std::vector<std::pair<int, int>> destination_;
 		//std::pair<int, int> source_;
 		Router::Direction last_hop_;
