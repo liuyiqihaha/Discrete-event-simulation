@@ -1,53 +1,77 @@
 #include "Chiplet.h"
+#include "configuration.h"
 
 namespace LLM
 {
     Chip::Chip(ChipType chiptype, int yDim_start)
-        :chiptype_(chiptype), yDim_start_(yDim_start)
+        :chiptype_(chiptype), 
+        yDim_start_(yDim_start),
+        xDim(8),
+        yDim(7) // 该chip的尺寸
     {
-        this->xDim = 8;
-        this->yDim = 7; // 该chip的尺寸
 		this->npus_ = std::vector<std::vector<NPU*>>(xDim); // 该chip所有NPU
-
+        this->routers_ = std::vector<std::vector<Router*>>(xDim + 1); // 该chip所有Router
 
         for (int x = 0; x < xDim; ++x)
         {
             npus_[x].resize(yDim);
+            routers_[x].resize(yDim);
         }
-
-        Router* new_router;
 
         // 根据chip种类不同，设置不同的NPU
-        switch (chiptype)
-        {
-        case Chip::ChipType::Chip1:
-        {
-            /*
-            对于Chip1：
-                对于前5列：为WeiAct型NPU
-                对于第6列：为StoreSend型NPU
-                对于第7列：为ActAct型NPU
-            */
-            for (int x = 0; x < xDim; ++x)
-            {
-                for (int y = 0; y < 5; ++y)
+		for (int x = 0; x < xDim; ++x)
+		{
+			for (int y = 0; y < yDim; ++y)
+			{
+				this->routers_[x][y] = new Router(x, y + yDim_start_);
+				if (NPU_TYPE[chiptype][x][y] == 0)
+				{
+					this->npus_[x][y] = new NPUWeiAct(this->routers_[x][y]);
+				}
+                else if (NPU_TYPE[chiptype][x][y] == 1)
                 {
-                    new_router = new Router(x, y + yDim_start_);
-                    this->npus_[x][y] = new NPUWeiAct(new_router);
+                    this->npus_[x][y] = new NPUStoreSend(this->routers_[x][y]);
                 }
-            }
-            for (int x = 0; x < xDim; ++x)
-            {
-                new_router = new Router(x, 5 + yDim_start_);
-                this->npus_[x][5] = new NPUStoreSend(new_router);
-                new_router = new Router(x, 6 + yDim_start_);
-                this->npus_[x][6] = new NPUActAct(new_router);
-            }
-            break;
-        }
-        default:
-            break;
-        }
+                else
+                {
+                    this->npus_[x][y] = new NPUActAct(this->routers_[x][y]);
+                }
+			}
+		}
+
+        //Router* new_router;
+
+        //// 根据chip种类不同，设置不同的NPU
+        //switch (chiptype)
+        //{
+        //case Chip::ChipType::Chip1:
+        //{
+        //    /*
+        //    对于Chip1：
+        //        对于前5列：为WeiAct型NPU
+        //        对于第6列：为StoreSend型NPU
+        //        对于第7列：为ActAct型NPU
+        //    */
+        //    for (int x = 0; x < xDim; ++x)
+        //    {
+        //        for (int y = 0; y < 5; ++y)
+        //        {
+        //            new_router = new Router(x, y + yDim_start_);
+        //            this->npus_[x][y] = new NPUWeiAct(new_router);
+        //        }
+        //    }
+        //    for (int x = 0; x < xDim; ++x)
+        //    {
+        //        new_router = new Router(x, 5 + yDim_start_);
+        //        this->npus_[x][5] = new NPUStoreSend(new_router);
+        //        new_router = new Router(x, 6 + yDim_start_);
+        //        this->npus_[x][6] = new NPUActAct(new_router);
+        //    }
+        //    break;
+        //}
+        //default:
+        //    break;
+        //}
     }
 
     Chip::~Chip()
@@ -60,7 +84,7 @@ namespace LLM
         {
         case Chip::ChipType::Chip1:
         {
-            /*
+            
             // 按照chip种类不同，设置NPU之间的互联关系，例如下面是针对第一个Chip的代码
             // NPU(0, 0)..NPU(0, 4)要将激活结果传递给NPU(0, 5)和NPU(1, 5)
             // NPU(2, 0)..NPU(2, 4)要将激活结果传递给NPU(2, 5)和NPU(3, 5)
@@ -69,18 +93,18 @@ namespace LLM
             for (int i = 0; i < 8; i += 2)
             {
                 dests[0].first = i;
-                dests[0].second = 5;
+                dests[0].second = this->yDim_start_ + 5;
                 dests[1].first = i + 1;
-                dests[1].second = 5;
+                dests[1].second = this->yDim_start_ + 5;
                 for (int j = 0; j < 5; ++j)
                     this->npus_[i][j]->Mapping(dests);
             }
             for (int i = 1; i < 8; i += 2)
             {
                 dests[0].first = i;
-                dests[0].second = 6;
-                dests[1].first = i + 1;
-                dests[1].second = 6;
+                dests[0].second = this->yDim_start_ + 6;
+                dests[1].first = i - 1;
+                dests[1].second = this->yDim_start_ + 6;
                 for (int j = 0; j < 5; ++j)
                     this->npus_[i][j]->Mapping(dests);
             }
@@ -90,7 +114,7 @@ namespace LLM
             for (int i = 0; i < 8; ++i)
             {
                 dests[0].first = i;
-                dests[0].second = 6;
+                dests[0].second = this->yDim_start_ + 6;
                 this->npus_[i][5]->Mapping(dests);
             }
 
@@ -99,15 +123,15 @@ namespace LLM
             for (int i = 0; i < 8; ++i)
             {
                 if (i >= 0 && i <= 3)
-                    dests[0].second = 10;
+                    dests[0].second = this->yDim_start_ + 11;
                 else
-                    dests[0].second = 9;
+                    dests[0].second = this->yDim_start_ + 10;
                 dests[0].first = i;
                 this->npus_[i][6]->Mapping(dests);
             }
 
             // 以上是chip1所有的mapping
-            */
+            
 
             /*
             // TODO：一个demo实例，测试单播
@@ -194,6 +218,220 @@ namespace LLM
             dynamic_cast<NPUActAct*>(this->npus_[3][6])->weight_token_buffer_cur_max_ = 3;
             break;
         }
+        case Chip::ChipType::Chip2:
+        {
+			std::vector<std::pair<int, int>> dests;
+			dests.resize(2);
+			for (int i = 0; i < 8; i += 2)
+			{
+                if (i < 4)
+                {
+					dests[0].first = i;
+					dests[0].second = this->yDim_start_ + 4;
+					dests[1].first = i + 1;
+					dests[1].second = this->yDim_start_ + 4;
+                }
+                else
+                {
+					dests[0].first = i;
+					dests[0].second = this->yDim_start_ + 3;
+					dests[1].first = i + 1;
+					dests[1].second = this->yDim_start_ + 3;
+                }
+				this->npus_[i][0]->Mapping(dests);
+                this->npus_[i][1]->Mapping(dests);
+			}
+			for (int i = 1; i < 8; i += 2)
+			{
+                if (i < 4)
+                {
+					dests[0].first = i;
+					dests[0].second = this->yDim_start_ + 4;
+					dests[1].first = i - 1;
+					dests[1].second = this->yDim_start_ + 4;
+                }
+                else
+                {
+					dests[0].first = i;
+					dests[0].second = this->yDim_start_ + 3;
+					dests[1].first = i - 1;
+					dests[1].second = this->yDim_start_ + 3;
+                }
+				this->npus_[i][0]->Mapping(dests);
+				this->npus_[i][1]->Mapping(dests);
+			}
+
+            {
+				dests[0].first = 0;
+				dests[0].second = this->yDim_start_ + 4;
+				dests[1].first = 1;
+				dests[1].second = this->yDim_start_ + 4;
+                this->npus_[0][2]->Mapping(dests);
+
+				dests[0].first = 2;
+				dests[0].second = this->yDim_start_ + 4;
+				dests[1].first = 3;
+				dests[1].second = this->yDim_start_ + 4;
+				this->npus_[1][2]->Mapping(dests);
+
+				dests[0].first = 4;
+				dests[0].second = this->yDim_start_ + 3;
+				dests[1].first = 5;
+				dests[1].second = this->yDim_start_ + 3;
+				this->npus_[2][2]->Mapping(dests);
+
+				dests[0].first = 6;
+				dests[0].second = this->yDim_start_ + 3;
+				dests[1].first = 7;
+				dests[1].second = this->yDim_start_ + 3;
+				this->npus_[3][2]->Mapping(dests);
+            }
+
+            dests.resize(0);
+            for (int i = 0; i < 8; i++)
+            {
+                if (i >= 4)
+                {
+                    std::pair<int, int> dest1{ i, this->yDim_start_ + 4 };
+                    dests.push_back(dest1);
+                }
+                std::pair<int, int> dest2{ i, this->yDim_start_ + 5 };
+                std::pair<int, int> dest3{ i, this->yDim_start_ + 6 };
+                dests.push_back(dest2);
+                dests.push_back(dest3);
+            }
+			for (int i = 0; i < 8; i++)
+			{
+				if (i < 4)
+				{
+                    this->npus_[i][3]->Mapping(dests);
+                    this->npus_[i][4]->Mapping(dests);
+				}
+                else
+                {
+					this->npus_[i][3]->Mapping(dests);
+					this->npus_[i][2]->Mapping(dests);
+                }
+			}
+
+            dests.resize(0);
+            for (int i = 0; i < 8; i++)
+			{
+                for (int j = 0; j < 7; j++)
+                {
+                    if (i > 5 && j > 4)
+                    {
+                        continue;
+                    }
+                    std::pair<int, int> dest1{ i, this->yDim_start_ + j + 7 };
+					std::pair<int, int> dest2{ i, this->yDim_start_ + j + 14 };
+					std::pair<int, int> dest3{ i, this->yDim_start_ + j + 21};
+                    dests.push_back(dest1);
+                    dests.push_back(dest2);
+                    dests.push_back(dest3);
+                }
+			}
+			for (int i = 0; i < 8; i++)
+			{
+				if (i >= 4)
+				{
+					this->npus_[i][4]->Mapping(dests);
+				}
+				this->npus_[i][5]->Mapping(dests);
+				this->npus_[i][6]->Mapping(dests);
+			}
+
+            break;
+        }
+        case Chip::ChipType::Chip3:
+        {
+            std::vector<std::pair<int, int>> dests;
+            dests.resize(1);
+
+            for (int i = 0; i < 8; i++)
+            {
+                for (int j = 0; j < 7; j++)
+                {
+                    if (i > 5 && j > 4)
+                    {
+                        continue;
+                    }
+					dests[0].first = i;
+					dests[0].second = this->yDim_start_ + j + 7;
+                    this->npus_[i][j]->Mapping(dests);
+                }
+            }
+        }
+		case Chip::ChipType::Chip4:
+		{
+			std::vector<std::pair<int, int>> dests;
+            dests.resize(0);
+
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 7; j++)
+				{
+					if (i > 5 && j > 4)
+					{
+						continue;
+					}
+					std::pair<int, int> dest1{ i, this->yDim_start_ + j + 7 };
+					dests.push_back(dest1);
+				}
+			}
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 7; j++)
+				{
+					if (i > 5 && j > 4)
+					{
+						continue;
+					}
+					this->npus_[i][j]->Mapping(dests);
+				}
+			}
+		}
+		case Chip::ChipType::Chip5:
+		{
+			std::vector<std::pair<int, int>> dests;
+			dests.resize(0);
+
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 5; j++)
+				{
+					std::pair<int, int> dest1{ i, this->yDim_start_ + j + 7 };
+					dests.push_back(dest1);
+				}
+			}
+
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 3; j++)
+				{
+					std::pair<int, int> dest1{ i, this->yDim_start_ + j + 14 };
+					dests.push_back(dest1);
+				}
+			}
+
+			for (int i = 0; i < 4; i++)
+			{
+				std::pair<int, int> dest1{ i, this->yDim_start_ + 3 + 7 };
+				dests.push_back(dest1);
+			}
+
+			for (int i = 0; i < 8; i++)
+			{
+				for (int j = 0; j < 7; j++)
+				{
+					if (i > 5 && j > 4)
+					{
+						continue;
+					}
+					this->npus_[i][j]->Mapping(dests);
+				}
+			}
+		}
         default:
             break;
         }

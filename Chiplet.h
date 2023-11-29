@@ -1,5 +1,6 @@
 #pragma once
 #include "NPU.h"
+#include "Router.h"
 #include "Simulator.h"
 
 namespace LLM
@@ -19,6 +20,7 @@ namespace LLM
 
 	public:
 		std::vector<std::vector<NPU*>> npus_;
+		std::vector<std::vector<Router*>> routers_;
 		int xDim;
 		int yDim;
 		int yDim_start_;  // 将物理上的多个chip合成逻辑上的一个chip，每个chip的起始column为yDim_start
